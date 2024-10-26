@@ -34,13 +34,11 @@ void inicializarBiblioteca(Biblioteca *biblioteca) {
 
 // Função para carregar livros do arquivo CSV
 void carregarLivros(Biblioteca *biblioteca) {
-    printf("Carregando livros do arquivo...\n");  // Mensagem de depuração
-    fflush(stdout);
+    printf("Carregando livros do arquivo...\n");
 
-    FILE *file = fopen(FILENAME, "r, ccs=UTF-8");
+    FILE *file = fopen(FILENAME, "r");
     if (!file) {
         printf("Erro ao abrir o arquivo CSV. Verifique o caminho e o arquivo.\n");
-        fflush(stdout);
         return;
     }
 
@@ -67,18 +65,16 @@ void carregarLivros(Biblioteca *biblioteca) {
             }
             biblioteca->livros[biblioteca->tamanho++] = livro;
         } else {
-            printf("Erro ao ler a linha: %s\n", linha);  // Exibe a linha que causou o erro
-            fflush(stdout);
+            printf("Erro ao ler a linha: %s\n", linha);
         }
     }
     fclose(file);
-    printf("Carregamento concluído.\n");  // Mensagem de depuração
-    fflush(stdout);
+    printf("Carregamento concluído.\n");
 }
 
 // Função para salvar todos os livros no arquivo CSV (reescreve o arquivo)
 void salvarTodosLivrosNoArquivo(Biblioteca *biblioteca) {
-    FILE *file = fopen(FILENAME, "w, ccs=UTF-8");
+    FILE *file = fopen(FILENAME, "w");
     fprintf(file, "Indice;Titulo;Autor;Ano;Lido;Doado\n");
     for (int i = 0; i < biblioteca->tamanho; i++) {
         Livro livro = biblioteca->livros[i];
@@ -99,12 +95,11 @@ void adicionarLivro(Biblioteca *biblioteca, char *titulo, char *autor, int ano, 
     strcpy(novoLivro.autor, autor);
     novoLivro.ano = ano;
     novoLivro.lido = lido;
-    novoLivro.doado = 0; // Inicialmente, o livro não está doado
+    novoLivro.doado = 0;
 
     biblioteca->livros[biblioteca->tamanho++] = novoLivro;
     salvarTodosLivrosNoArquivo(biblioteca);
     printf("Livro adicionado com sucesso!\n");
-    fflush(stdout);
 }
 
 // Função para marcar um livro como doado
@@ -123,31 +118,13 @@ void doarLivro(Biblioteca *biblioteca, int indice) {
 // Função para exibir todos os livros
 void exibirLivros(Biblioteca *biblioteca) {
     printf("Lista de Livros:\n");
-    fflush(stdout);
-    int i;
-    for (i = 0; i < biblioteca->tamanho; i++) {
+    for (int i = 0; i < biblioteca->tamanho; i++) {
         printf("%d. %s, por %s (%d) - %s - %s\n", biblioteca->livros[i].indice,
                biblioteca->livros[i].titulo,
                biblioteca->livros[i].autor,
                biblioteca->livros[i].ano,
                biblioteca->livros[i].doado ? "Doado" : "Disponível",
                biblioteca->livros[i].lido ? "Lido" : "Não Lido");
-        fflush(stdout);
-    }
-}
-
-// Função para exibir livros não doados
-void exibirLivrosNaoDoado(Biblioteca *biblioteca) {
-    printf("Lista de Livros Disponíveis para Doação:\n");
-    int i;
-    for (i = 0; i < biblioteca->tamanho; i++) {
-        if (!biblioteca->livros[i].doado) {
-            printf("%d. %s, por %s (%d) - %s\n", biblioteca->livros[i].indice,
-                   biblioteca->livros[i].titulo,
-                   biblioteca->livros[i].autor,
-                   biblioteca->livros[i].ano,
-                   biblioteca->livros[i].lido ? "Lido" : "Não Lido");
-        }
     }
 }
 
@@ -158,16 +135,11 @@ void liberarBiblioteca(Biblioteca *biblioteca) {
 
 // Função principal que exibe o menu interativo
 void menu() {
-    setlocale(LC_ALL, "Portuguese");  // Habilita suporte à acentuação
-    printf("Iniciando o menu...\n");  // Mensagem de diagnóstico
-    fflush(stdout);
+    setlocale(LC_ALL, "Portuguese");
 
     Biblioteca biblioteca;
     inicializarBiblioteca(&biblioteca);
     carregarLivros(&biblioteca);
-
-    printf("Menu iniciado com sucesso.\n");  // Mensagem de diagnóstico
-    fflush(stdout);
 
     int opcao, ano, lido, indice;
     char titulo[100], autor[100];
@@ -179,11 +151,9 @@ void menu() {
         printf("3. Marcar Livro como Doado\n");
         printf("4. Sair\n");
         printf("Escolha uma opção: ");
-        fflush(stdout);
 
         if (scanf("%d", &opcao) != 1) {
             printf("Entrada inválida! Tente novamente.\n");
-            fflush(stdout);
             while (getchar() != '\n');
             continue;
         }
@@ -191,24 +161,18 @@ void menu() {
         switch(opcao) {
             case 1:
                 printf("Digite o título: ");
-                fflush(stdout);
                 scanf(" %[^\n]", titulo);
                 printf("Digite o autor: ");
-                fflush(stdout);
                 scanf(" %[^\n]", autor);
                 printf("Digite o ano: ");
-                fflush(stdout);
                 if (scanf("%d", &ano) != 1) {
                     printf("Ano inválido! Tente novamente.\n");
-                    fflush(stdout);
                     while (getchar() != '\n');
                     continue;
                 }
                 printf("Já leu este livro? (1 para sim, 0 para não): ");
-                fflush(stdout);
                 if (scanf("%d", &lido) != 1) {
                     printf("Entrada inválida! Tente novamente.\n");
-                    fflush(stdout);
                     while (getchar() != '\n');
                     continue;
                 }
@@ -217,12 +181,10 @@ void menu() {
             case 2:
                 exibirLivros(&biblioteca);
                 printf("\nPressione Enter para voltar ao menu...\n");
-                fflush(stdout);
                 while (getchar() != '\n');
                 getchar();
                 break;
             case 3:
-                exibirLivrosNaoDoado(&biblioteca);
                 printf("Digite o índice do livro para marcar como doado: ");
                 if (scanf("%d", &indice) != 1) {
                     printf("Índice inválido! Tente novamente.\n");
@@ -234,11 +196,9 @@ void menu() {
             case 4:
                 liberarBiblioteca(&biblioteca);
                 printf("Saindo...\n");
-                fflush(stdout);
                 return;
             default:
                 printf("Opção inválida! Tente novamente.\n");
-                fflush(stdout);
                 while (getchar() != '\n');
         }
     }
@@ -247,4 +207,3 @@ void menu() {
 int main() {
     menu();
     return 0;
-}
