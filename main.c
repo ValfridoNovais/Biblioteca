@@ -1,143 +1,245 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <locale.h>
+
+#define FILENAME "C:\\Repositorios_GitHube\\MeusProjetos\\Biblioteca\\biblioteca.csv"
 
 // Estrutura que define os campos do livro
 typedef struct {
+    int indice;
     char titulo[100];
     char autor[100];
     int ano;
+    int lido;  // 1 para lido, 0 para n√£o lido
+    int doado; // 1 para doado, 0 para n√£o doado
 } Livro;
 
-// Lista din‚mica para armazenar os livros
+// Lista din√¢mica para armazenar os livros
 typedef struct {
     Livro *livros;
     int tamanho;
     int capacidade;
 } Biblioteca;
 
-// FunÁ„o para limpar a tela
-void limparTela() {
-    #ifdef _WIN32
-        system("cls");
-    #else
-        system("clear");
-    #endif
-}
+// Declara√ß√£o da fun√ß√£o liberarBiblioteca
+void liberarBiblioteca(Biblioteca *biblioteca);
 
-// FunÁ„o para inicializar a biblioteca sem limite fixo inicial
+// Fun√ß√£o para inicializar a biblioteca
 void inicializarBiblioteca(Biblioteca *biblioteca) {
     biblioteca->tamanho = 0;
-    biblioteca->capacidade = 1; // ComeÁamos com capacidade 1
+    biblioteca->capacidade = 1;
     biblioteca->livros = malloc(biblioteca->capacidade * sizeof(Livro));
 }
 
-// FunÁ„o para adicionar um livro ‡ biblioteca com capacidade incremental
-void adicionarLivro(Biblioteca *biblioteca, char *titulo, char *autor, int ano) {
-    // Incrementa a capacidade em 1 se necess·rio
+// Fun√ß√£o para carregar livros do arquivo CSV
+void carregarLivros(Biblioteca *biblioteca) {
+    printf("Carregando livros do arquivo...\n");  // Mensagem de depura√ß√£o
+    fflush(stdout);
+
+    FILE *file = fopen(FILENAME, "r, ccs=UTF-8");
+    if (!file) {
+        printf("Erro ao abrir o arquivo CSV. Verifique o caminho e o arquivo.\n");
+        fflush(stdout);
+        return;
+    }
+
+    // Ignora a primeira linha do cabe√ßalho
+    char linha[256];
+    if (fgets(linha, sizeof(linha), file) == NULL) {
+        printf("Arquivo CSV vazio ou formato incorreto.\n");
+        fclose(file);
+        return;
+    }
+
+    // Leitura dos dados de cada livro
+    while (fgets(linha, sizeof(linha), file)) {
+        Livro livro;
+        int resultado = sscanf(linha, "%d;%99[^;];%99[^;];%d;%d;%d",
+                               &livro.indice, livro.titulo, livro.autor,
+                               &livro.ano, &livro.lido, &livro.doado);
+
+        // Verifica se a linha foi lida corretamente
+        if (resultado == 6) {
+            if (biblioteca->tamanho >= biblioteca->capacidade) {
+                biblioteca->capacidade += 1;
+                biblioteca->livros = realloc(biblioteca->livros, biblioteca->capacidade * sizeof(Livro));
+            }
+            biblioteca->livros[biblioteca->tamanho++] = livro;
+        } else {
+            printf("Erro ao ler a linha: %s\n", linha);  // Exibe a linha que causou o erro
+            fflush(stdout);
+        }
+    }
+    fclose(file);
+    printf("Carregamento conclu√≠do.\n");  // Mensagem de depura√ß√£o
+    fflush(stdout);
+}
+
+// Fun√ß√£o para salvar todos os livros no arquivo CSV (reescreve o arquivo)
+void salvarTodosLivrosNoArquivo(Biblioteca *biblioteca) {
+    FILE *file = fopen(FILENAME, "w, ccs=UTF-8");
+    fprintf(file, "Indice;Titulo;Autor;Ano;Lido;Doado\n");
+    for (int i = 0; i < biblioteca->tamanho; i++) {
+        Livro livro = biblioteca->livros[i];
+        fprintf(file, "%d;%s;%s;%d;%d;%d\n", livro.indice, livro.titulo, livro.autor, livro.ano, livro.lido, livro.doado);
+    }
+    fclose(file);
+}
+
+// Fun√ß√£o para adicionar um livro √† biblioteca
+void adicionarLivro(Biblioteca *biblioteca, char *titulo, char *autor, int ano, int lido) {
     if (biblioteca->tamanho >= biblioteca->capacidade) {
         biblioteca->capacidade += 1;
         biblioteca->livros = realloc(biblioteca->livros, biblioteca->capacidade * sizeof(Livro));
     }
-    // Adiciona o livro
-    strcpy(biblioteca->livros[biblioteca->tamanho].titulo, titulo);
-    strcpy(biblioteca->livros[biblioteca->tamanho].autor, autor);
-    biblioteca->livros[biblioteca->tamanho].ano = ano;
-    biblioteca->tamanho++;
+    Livro novoLivro;
+    novoLivro.indice = biblioteca->tamanho == 0 ? 1 : biblioteca->livros[biblioteca->tamanho - 1].indice + 1;
+    strcpy(novoLivro.titulo, titulo);
+    strcpy(novoLivro.autor, autor);
+    novoLivro.ano = ano;
+    novoLivro.lido = lido;
+    novoLivro.doado = 0; // Inicialmente, o livro n√£o est√° doado
+
+    biblioteca->livros[biblioteca->tamanho++] = novoLivro;
+    salvarTodosLivrosNoArquivo(biblioteca);
     printf("Livro adicionado com sucesso!\n");
+    fflush(stdout);
 }
 
-// FunÁ„o para exibir todos os livros
+// Fun√ß√£o para marcar um livro como doado
+void doarLivro(Biblioteca *biblioteca, int indice) {
+    for (int i = 0; i < biblioteca->tamanho; i++) {
+        if (biblioteca->livros[i].indice == indice && biblioteca->livros[i].doado == 0) {
+            biblioteca->livros[i].doado = 1;
+            salvarTodosLivrosNoArquivo(biblioteca);
+            printf("Livro marcado como doado com sucesso!\n");
+            return;
+        }
+    }
+    printf("Livro n√£o encontrado ou j√° doado.\n");
+}
+
+// Fun√ß√£o para exibir todos os livros
 void exibirLivros(Biblioteca *biblioteca) {
     printf("Lista de Livros:\n");
+    fflush(stdout);
     int i;
     for (i = 0; i < biblioteca->tamanho; i++) {
-        printf("%d. %s, por %s (%d)\n", i + 1, biblioteca->livros[i].titulo, biblioteca->livros[i].autor, biblioteca->livros[i].ano);
+        printf("%d. %s, por %s (%d) - %s - %s\n", biblioteca->livros[i].indice,
+               biblioteca->livros[i].titulo,
+               biblioteca->livros[i].autor,
+               biblioteca->livros[i].ano,
+               biblioteca->livros[i].doado ? "Doado" : "Dispon√≠vel",
+               biblioteca->livros[i].lido ? "Lido" : "N√£o Lido");
+        fflush(stdout);
     }
 }
 
-// FunÁ„o para remover um livro pelo Ìndice
-void removerLivro(Biblioteca *biblioteca, int indice) {
-    if (indice < 0 || indice >= biblioteca->tamanho) {
-        printf("Õndice inv·lido!\n");
-        return;
-    }
+// Fun√ß√£o para exibir livros n√£o doados
+void exibirLivrosNaoDoado(Biblioteca *biblioteca) {
+    printf("Lista de Livros Dispon√≠veis para Doa√ß√£o:\n");
     int i;
-    for (i = indice; i < biblioteca->tamanho - 1; i++) {
-        biblioteca->livros[i] = biblioteca->livros[i + 1];
+    for (i = 0; i < biblioteca->tamanho; i++) {
+        if (!biblioteca->livros[i].doado) {
+            printf("%d. %s, por %s (%d) - %s\n", biblioteca->livros[i].indice,
+                   biblioteca->livros[i].titulo,
+                   biblioteca->livros[i].autor,
+                   biblioteca->livros[i].ano,
+                   biblioteca->livros[i].lido ? "Lido" : "N√£o Lido");
+        }
     }
-    biblioteca->tamanho--;
-    printf("Livro removido com sucesso!\n");
 }
 
-// FunÁ„o para liberar a memÛria da biblioteca
+// Fun√ß√£o para liberar a mem√≥ria da biblioteca
 void liberarBiblioteca(Biblioteca *biblioteca) {
     free(biblioteca->livros);
 }
 
-// FunÁ„o principal que exibe o menu interativo
+// Fun√ß√£o principal que exibe o menu interativo
 void menu() {
+    setlocale(LC_ALL, "Portuguese");  // Habilita suporte √† acentua√ß√£o
+    printf("Iniciando o menu...\n");  // Mensagem de diagn√≥stico
+    fflush(stdout);
+
     Biblioteca biblioteca;
     inicializarBiblioteca(&biblioteca);
+    carregarLivros(&biblioteca);
 
-    int opcao, ano, indice;
+    printf("Menu iniciado com sucesso.\n");  // Mensagem de diagn√≥stico
+    fflush(stdout);
+
+    int opcao, ano, lido, indice;
     char titulo[100], autor[100];
 
     while (1) {
-        limparTela(); // Limpa a tela a cada iteraÁ„o do menu
         printf("\n--- Menu da Biblioteca ---\n");
         printf("1. Adicionar Livro\n");
         printf("2. Exibir Livros\n");
-        printf("3. Remover Livro\n");
+        printf("3. Marcar Livro como Doado\n");
         printf("4. Sair\n");
-        printf("Escolha uma opÁ„o: ");
-        
-        // Verifica se a entrada È v·lida
+        printf("Escolha uma op√ß√£o: ");
+        fflush(stdout);
+
         if (scanf("%d", &opcao) != 1) {
-            printf("Entrada inv·lida! Pressione Enter para tentar novamente.\n");
-            while (getchar() != '\n'); // Limpa o buffer de entrada
+            printf("Entrada inv√°lida! Tente novamente.\n");
+            fflush(stdout);
+            while (getchar() != '\n');
             continue;
         }
 
         switch(opcao) {
             case 1:
-                printf("Digite o tÌtulo: ");
+                printf("Digite o t√≠tulo: ");
+                fflush(stdout);
                 scanf(" %[^\n]", titulo);
                 printf("Digite o autor: ");
+                fflush(stdout);
                 scanf(" %[^\n]", autor);
                 printf("Digite o ano: ");
+                fflush(stdout);
                 if (scanf("%d", &ano) != 1) {
-                    printf("Ano inv·lido! Pressione Enter para tentar novamente.\n");
-                    while (getchar() != '\n'); // Limpa o buffer de entrada
+                    printf("Ano inv√°lido! Tente novamente.\n");
+                    fflush(stdout);
+                    while (getchar() != '\n');
                     continue;
                 }
-                adicionarLivro(&biblioteca, titulo, autor, ano);
+                printf("J√° leu este livro? (1 para sim, 0 para n√£o): ");
+                fflush(stdout);
+                if (scanf("%d", &lido) != 1) {
+                    printf("Entrada inv√°lida! Tente novamente.\n");
+                    fflush(stdout);
+                    while (getchar() != '\n');
+                    continue;
+                }
+                adicionarLivro(&biblioteca, titulo, autor, ano, lido);
                 break;
             case 2:
                 exibirLivros(&biblioteca);
                 printf("\nPressione Enter para voltar ao menu...\n");
-                while (getchar() != '\n'); // Limpa o buffer de entrada
-                getchar(); // Espera o usu·rio pressionar Enter
+                fflush(stdout);
+                while (getchar() != '\n');
+                getchar();
                 break;
             case 3:
-                printf("Digite o Ìndice do livro para remover: ");
+                exibirLivrosNaoDoado(&biblioteca);
+                printf("Digite o √≠ndice do livro para marcar como doado: ");
                 if (scanf("%d", &indice) != 1) {
-                    printf("Õndice inv·lido! Pressione Enter para tentar novamente.\n");
-                    while (getchar() != '\n'); // Limpa o buffer de entrada
+                    printf("√çndice inv√°lido! Tente novamente.\n");
+                    while (getchar() != '\n');
                     continue;
                 }
-                removerLivro(&biblioteca, indice - 1);
-                printf("\nPressione Enter para voltar ao menu...\n");
-                while (getchar() != '\n'); // Limpa o buffer de entrada
-                getchar(); // Espera o usu·rio pressionar Enter
+                doarLivro(&biblioteca, indice);
                 break;
             case 4:
                 liberarBiblioteca(&biblioteca);
                 printf("Saindo...\n");
+                fflush(stdout);
                 return;
             default:
-                printf("OpÁ„o inv·lida! Pressione Enter para tentar novamente.\n");
-                while (getchar() != '\n'); // Limpa o buffer de entrada
+                printf("Op√ß√£o inv√°lida! Tente novamente.\n");
+                fflush(stdout);
+                while (getchar() != '\n');
         }
     }
 }
